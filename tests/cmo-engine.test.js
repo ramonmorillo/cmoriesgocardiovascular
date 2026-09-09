@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {priorityForScore,stratify} from '../assets/modules/cmo-engine.js';import {VARIABLES} from '../assets/modules/config.js';import {interventionsFor} from '../assets/modules/interventions-catalog.js';
+globalThis.window={CMO_APP_CONFIG:{}};
+const fakeTotal=n=>{let left=n;return VARIABLES.map(v=>{const opts=[...v.options].sort((a,b)=>b.score-a.score),o=opts.find(x=>x.score<=left)||v.options.find(x=>x.score===0);left-=o.score;return{id:v.id,value:o.value,validation:'confirmed'}})};
+test('umbrales 0, 16, 17, 22 y 23',()=>{assert.equal(priorityForScore(0),3);assert.equal(priorityForScore(16),3);assert.equal(priorityForScore(17),2);assert.equal(priorityForScore(22),2);assert.equal(priorityForScore(23),1)});
+test('máximo 42 y cálculo por bloques',()=>{const r=stratify(VARIABLES.map(v=>({id:v.id,value:[...v.options].sort((a,b)=>b.score-a.score)[0].value,validation:'confirmed'})));assert.equal(r.total,42);assert.deepEqual(r.blocks,{demographic:7,clinical:21,pharmacotherapy:10,social:4})});
+test('embarazo fuerza P1',()=>assert.equal(stratify([{id:'pregnancy',value:'risk',validation:'confirmed'}]).priority,1));
+test('menor no aplicable',()=>assert.equal(stratify([{id:'age',value:'<18',validation:'confirmed'}]).applicable,false));
+test('solo confirmadas puntúan',()=>assert.equal(stratify([{id:'basePathology',value:'risk',validation:'suggested'}]).total,0));
+test('elevación manual exige motivo y queda registrada',()=>{assert.throws(()=>stratify([],{manualPriority:1}));const r=stratify([],{manualPriority:1,manualReason:'Fragilidad clínica'});assert.equal(r.priority,1);assert.equal(r.override,true)});
+test('intervenciones acumulativas',()=>{assert.ok(interventionsFor(1).length>interventionsFor(2).length);assert.ok(interventionsFor(2).length>interventionsFor(3).length)});
