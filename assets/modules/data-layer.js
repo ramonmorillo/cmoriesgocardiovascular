@@ -1,0 +1,2 @@
+const fresh=()=>({clinicalText:'',records:[],result:null,needs:[],resources:[],interventions:[],selected:[],alerts:[],goals:{pharmacotherapy:'',patient:'',barriers:'',actions:''},meta:{date:new Date().toISOString().slice(0,10),hospital:'',pharmacist:'',code:''}});let state=fresh();
+export const getState=()=>state;export const update=patch=>Object.assign(state,patch);export const reset=()=>{state=fresh()};
