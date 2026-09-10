@@ -1,6 +1,6 @@
 # CMO Cardiovascular
 
-Herramienta estática de apoyo a la decisión para el farmacéutico hospitalario: historia clínica → extracción orientativa → validación → estratificación → necesidades → intervenciones → informe.
+Herramienta estática de apoyo a la decisión para el farmacéutico hospitalario: identificación profesional → elección de itinerario manual o asistido → validación → estratificación → necesidades → intervenciones → informe.
 
 > No sustituye el juicio profesional. La transcripción clínica debe cotejarse con el documento autorizado antes del uso asistencial; consulte `CLINICAL_MODEL.md`.
 
@@ -16,11 +16,11 @@ No requiere instalación ni build. GitHub Pages puede publicar la rama principal
 
 ## Flujo y garantías
 
-1. Pegado de texto pseudonimizado y extractor heurístico conservador.
-2. Revisión de evidencia/confianza; confirmación, modificación o descarte.
-3. Completar pendientes y calcular solo con validaciones humanas.
-4. Necesidades trazables y objetivos compartidos.
-5. Intervenciones acumulativas filtradas por factibilidad, sin ocultar carencias.
+1. Identificación inicial del hospital/centro y del farmacéutico responsable.
+2. Elección entre estratificación manual o análisis asistido de texto pseudonimizado.
+3. Revisión de evidencia/confianza; confirmación, modificación o descarte.
+4. Completar pendientes y calcular solo con validaciones humanas.
+5. Necesidades trazables, objetivos compartidos e intervenciones según factibilidad.
 6. Informe Markdown, portapapeles, descarga, impresión/PDF y trazabilidad.
 
 El estado solo vive en memoria. No se usan dependencias externas, trackers ni persistencia. “Nueva estratificación” solicita confirmación y borra todo.
@@ -38,6 +38,7 @@ El navegador envía `{ clinicalText, variables, instructions }`. Nunca coloque c
 ## Limitaciones
 
 - La heurística local no comprende plenamente negaciones, temporalidad ni contexto.
+- La etiqueta de acceso «Usar IA» no implica que exista IA generativa configurada: sin un endpoint seguro se ejecuta exclusivamente la heurística local.
 - No existe validación clínica/regulatoria ni integración HCE.
 - Las alertas exhaustivas de anexos quedan pendientes de cotejo con el documento fuente redistribuible.
 - La exactitud de la matriz y actuaciones requiere firma del responsable clínico antes de despliegue asistencial.
