@@ -1,13 +1,312 @@
-import {VARIABLES,BLOCKS} from './modules/config.js';import {extractClinical} from './modules/clinical-extraction-service.js';import {getState,update,reset} from './modules/data-layer.js';import {stratify} from './modules/cmo-engine.js';import {mapNeeds} from './modules/needs-mapper.js';import {interventionsFor} from './modules/interventions-catalog.js';import {report,download} from './modules/export-layer.js';
-const stages=['Historia clínica','Revisión','Estratificación','Necesidades','Intervenciones','Informe'];let stage=0;const app=document.querySelector('#app'),nav=document.querySelector('#steps');
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const vBy=id=>VARIABLES.find(v=>v.id===id);const option=(v,val)=>v.options.find(o=>o.value===val);
-function shell(){nav.innerHTML=stages.map((x,i)=>`<button class="step ${i===stage?'active':''}" data-stage="${i}" ${i>stage?'disabled':''}>${i+1} ${x}</button>`).join('');nav.querySelectorAll('button:not(:disabled)').forEach(b=>b.onclick=()=>{stage=+b.dataset.stage;render();});}
-function history(){const s=getState();app.innerHTML=`<section class="panel hero"><span class="badge">EXTRACCIÓN LOCAL ORIENTATIVA</span><h2>Extraer información desde la historia clínica</h2><p class="lead">Pegue informe, evolución, antecedentes, analítica, tratamiento o conciliación. Nada se considera cierto hasta que usted lo confirma.</p><label for="clinical">Texto clínico pseudonimizado</label><textarea id="clinical" placeholder="Pegue aquí el texto sin nombre, DNI ni número de historia…">${esc(s.clinicalText)}</textarea><p><small>El texto permanece únicamente en memoria y se elimina al recargar o iniciar una nueva estratificación.</small></p><div class="actions"><button id="analyse">Analizar historia clínica</button></div></section>`;document.querySelector('#analyse').onclick=async e=>{const text=document.querySelector('#clinical').value.trim();if(!text)return alert('Introduzca texto clínico pseudonimizado.');e.target.disabled=true;e.target.textContent='Analizando…';try{update({clinicalText:text,records:await extractClinical(text)});stage=1;render()}catch(err){alert(err.message);e.target.disabled=false}};}
-function review(){const s=getState();app.innerHTML=`<h2>Revisión de la extracción</h2><p class="lead">Confirme, modifique, descarte o deje pendiente cada hallazgo. Solo lo validado puntuará.</p><div class="grid">${s.records.map(r=>{const v=vBy(r.id),op=option(v,r.value);return `<article class="review ${r.validation}" data-id="${r.id}"><div><span class="badge">${esc(r.finding)}</span> · confianza ${esc(r.confidence)}</div><h3>${esc(v.label)}</h3><label>Valor sugerido</label><select>${`<option value="">No consta / pendiente</option>`+v.options.map(o=>`<option value="${o.value}" ${o.value===r.value?'selected':''}>${esc(o.label)} — ${o.score} puntos</option>`).join('')}</select><p><b>Puntuación propuesta:</b> ${op?.score??'—'}</p><div class="evidence"><b>Evidencia:</b> ${esc(r.evidence)||'No encontrada'}</div><div class="review-actions"><button data-a="confirm">Confirmar</button><button class="secondary" data-a="modify">Modificar</button><button class="secondary danger" data-a="reject">Descartar</button></div></article>`}).join('')}</div><div class="actions"><button id="continue">Completar información pendiente →</button></div>`;
- app.querySelectorAll('.review').forEach(card=>card.onclick=e=>{const a=e.target.dataset.a;if(!a)return;const r=s.records.find(x=>x.id===card.dataset.id),value=card.querySelector('select').value;if(a==='reject'){r.validation='rejected';r.value=null;r.finding='descartada'}else if(!value)return alert('Seleccione un valor.');else{r.value=value;r.validation=a==='modify'?'modified':'confirmed';r.finding='validada'}render()});document.querySelector('#continue').onclick=()=>{stage=2;render()};}
-function stratification(){const s=getState();app.innerHTML=`<h2>Completar información pendiente y estratificar</h2><p class="lead">Registre manualmente solo los datos comprobados. Puede dejar cualquier variable pendiente.</p><section class="panel"><div class="grid">${VARIABLES.map(v=>{const r=s.records.find(x=>x.id===v.id),valid=['confirmed','modified','manual'].includes(r?.validation);return `<div><label>${esc(v.label)} ${v.interview?'<span class="badge">entrevista</span>':''}</label><select data-var="${v.id}"><option value="">Pendiente / no consta</option>${v.options.map(o=>`<option value="${o.value}" ${valid&&r.value===o.value?'selected':''}>${esc(o.label)} — ${o.score}</option>`).join('')}</select></div>`}).join('')}</div><hr><label>Elevar prioridad por criterio profesional (opcional)</label><select id="override"><option value="">Sin elevación</option><option value="2">Prioridad 2</option><option value="1">Prioridad 1</option></select><label>Motivo obligatorio si se eleva el nivel</label><input id="reason" placeholder="Criterio clínico y justificación"><div class="actions"><button id="calculate">Calcular con variables validadas</button></div><div id="calculation"></div></section>`;
- document.querySelector('#calculate').onclick=()=>{document.querySelectorAll('[data-var]').forEach(el=>{let r=s.records.find(x=>x.id===el.dataset.var);if(!r){r={id:el.dataset.var};s.records.push(r)}if(el.value&&(!['confirmed','modified'].includes(r.validation)||r.value!==el.value)){r.value=el.value;r.validation='manual';r.origin='manual';r.evidence='Introducción manual por el farmacéutico';r.finding='validada'}else if(!el.value&&r.validation==='manual'){r.value=null;r.validation='missing'}});try{const result=stratify(s.records,{manualPriority:+document.querySelector('#override').value||null,manualReason:document.querySelector('#reason').value});update({result,needs:result.applicable?mapNeeds(s.records):[]});if(!result.applicable)document.querySelector('#calculation').innerHTML=`<p class="warning">${result.reason}</p>`;else{document.querySelector('#calculation').innerHTML=`<div class="panel"><div class="score">${result.total}<small>/42</small></div><div class="priority">PRIORIDAD ${result.priority}</div>${result.override?`<p class="warning">Elevación profesional documentada: ${esc(result.manualReason)}</p>`:''}<div class="grid">${Object.entries(BLOCKS).map(([k,b])=>`<div><b>${b.label}: ${result.blocks[k]}/${b.max}</b><div class="bar"><i style="width:${result.blocks[k]/b.max*100}%"></i></div></div>`).join('')}</div><p>${result.confirmedCount}/20 variables validadas.</p><div class="actions"><button id="next">Ver necesidades →</button></div></div>`;document.querySelector('#next').onclick=()=>{stage=3;render()}}}catch(e){alert(e.message)}};}
-function needs(){const s=getState();app.innerHTML=`<h2>Necesidades detectadas</h2><p class="lead">Cada propuesta mantiene la trazabilidad con la variable que la origina.</p><section class="panel">${s.needs.map(n=>`<div class="check"><span>✓</span><div><b>${esc(n.label)}</b><br><small>Variable desencadenante: ${esc(vBy(n.trigger)?.label||n.trigger)}</small></div></div>`).join('')||'<p>No se detectaron necesidades automáticas con las variables positivas confirmadas.</p>'}</section><section class="panel"><h3>Objetivos y plan compartido <span class="badge">opcional</span></h3><div class="grid">${[['pharmacotherapy','Objetivos farmacoterapéuticos acordados'],['patient','Objetivos del paciente'],['barriers','Barreras y disposición al cambio'],['actions','Acciones acordadas']].map(([k,l])=>`<div><label>${l}</label><textarea data-goal="${k}" style="min-height:80px">${esc(s.goals[k])}</textarea></div>`).join('')}</div></section><div class="actions"><button id="next">Seleccionar intervenciones →</button></div>`;document.querySelector('#next').onclick=()=>{document.querySelectorAll('[data-goal]').forEach(x=>s.goals[x.dataset.goal]=x.value.trim());stage=4;render()};}
-function interventions(){const s=getState();const resources=[['seguimiento','Seguimiento farmacoterapéutico'],['educacion','Educación sanitaria'],['adherencia','Entrevista motivacional / adherencia'],['telefarmacia','Telefarmacia'],['telemonitorizacion','Telemonitorización'],['conciliacion','Conciliación'],['interacciones','Revisión de interacciones'],['cardiologia','Coordinación asistencial']];s.interventions=interventionsFor(s.result.priority,s.resources);app.innerHTML=`<h2>Intervenciones farmacéuticas</h2><section class="panel"><h3>¿Qué intervenciones son factibles en tu entorno?</h3><div class="grid">${resources.map(([k,l])=>`<label class="check"><input type="checkbox" data-resource="${k}" ${s.resources.includes(k)?'checked':''}> ${l}</label>`).join('')}</div></section><section class="panel"><h3>Seleccionar y priorizar</h3>${s.interventions.map(i=>`<label class="check"><input type="checkbox" data-int="${i.id}" ${s.selected.includes(i.id)?'checked':''}><span><b>${esc(i.label)}</b> <span class="badge">P${i.level} · ${esc(i.category)}</span><br><small>${i.available?'Factible con recursos seleccionados':'Recomendada, actualmente no disponible'} · responde al nivel y necesidades del paciente</small></span></label>`).join('')}</section><div class="actions"><button id="next">Generar informe →</button></div>`;document.querySelectorAll('[data-resource]').forEach(x=>x.onchange=()=>{s.resources=x.checked?[...new Set([...s.resources,x.dataset.resource])]:s.resources.filter(k=>k!==x.dataset.resource);render()});document.querySelector('#next').onclick=()=>{s.selected=[...document.querySelectorAll('[data-int]:checked')].map(x=>x.dataset.int);s.interventions=interventionsFor(s.result.priority,s.resources);stage=5;render()};}
-function finalReport(){const s=getState();app.innerHTML=`<h2>Informe CMO cardiovascular</h2><section class="panel no-print"><div class="fields"><div><label>Fecha</label><input data-meta="date" type="date" value="${esc(s.meta.date)}"></div><div><label>Hospital</label><input data-meta="hospital" value="${esc(s.meta.hospital)}"></div><div><label>Farmacéutico/a</label><input data-meta="pharmacist" value="${esc(s.meta.pharmacist)}"></div><div><label>Identificador pseudonimizado</label><input data-meta="code" value="${esc(s.meta.code)}"></div></div></section><pre class="report" id="report">${esc(report(s))}</pre><div class="actions no-print"><button class="secondary" id="copy">Copiar informe</button><button class="secondary" id="download">Descargar Markdown</button><button id="print">Imprimir / PDF</button></div>`;const refresh=()=>{document.querySelectorAll('[data-meta]').forEach(x=>s.meta[x.dataset.meta]=x.value);document.querySelector('#report').textContent=report(s)};document.querySelectorAll('[data-meta]').forEach(x=>x.oninput=refresh);document.querySelector('#copy').onclick=async()=>{await navigator.clipboard.writeText(report(s));alert('Informe copiado.')};document.querySelector('#download').onclick=()=>download(report(s));document.querySelector('#print').onclick=()=>window.print();}
-function render(){shell();[history,review,stratification,needs,interventions,finalReport][stage]();scrollTo({top:0,behavior:'smooth'})}document.querySelector('#reset').onclick=()=>{if(confirm('¿Borrar todos los datos de esta estratificación? Esta acción no se puede deshacer.')){reset();stage=0;render()}};render();
+import { VARIABLES, BLOCKS } from "./modules/config.js";
+import { extractClinical } from "./modules/clinical-extraction-service.js";
+import { getState, update, reset } from "./modules/data-layer.js";
+import { stratify } from "./modules/cmo-engine.js";
+import { mapNeeds } from "./modules/needs-mapper.js";
+import { interventionsFor } from "./modules/interventions-catalog.js";
+import { report, download } from "./modules/export-layer.js";
+const stages = [
+  "Inicio",
+  "Historia clínica",
+  "Revisión",
+  "Estratificación",
+  "Necesidades",
+  "Intervenciones",
+  "Informe",
+];
+let stage = 0;
+const unlockedStages = new Set([0]);
+const app = document.querySelector("#app"),
+  nav = document.querySelector("#steps");
+const esc = (s) =>
+  String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ],
+  );
+const vBy = (id) => VARIABLES.find((v) => v.id === id);
+const option = (v, val) => v.options.find((o) => o.value === val);
+function goTo(nextStage) {
+  stage = nextStage;
+  unlockedStages.add(nextStage);
+  render();
+}
+function shell() {
+  nav.innerHTML = stages
+    .map(
+      (x, i) =>
+        `<button class="step ${i === stage ? "active" : ""}" data-stage="${i}" ${!unlockedStages.has(i) ? "disabled" : ""}>${i + 1} ${x}</button>`,
+    )
+    .join("");
+  nav.querySelectorAll("button:not(:disabled)").forEach(
+    (b) =>
+      (b.onclick = () => {
+        stage = +b.dataset.stage;
+        render();
+      }),
+  );
+}
+function start() {
+  const s = getState();
+  app.innerHTML = `<section class="panel hero start-panel">
+    <span class="badge">NUEVA ESTRATIFICACIÓN</span>
+    <h2>Datos de la evaluación</h2>
+    <p class="lead">Identifique el centro y al profesional responsable antes de elegir cómo desea iniciar la estratificación.</p>
+    <div class="fields start-fields">
+      <div><label for="hospital">Hospital o centro sanitario</label><input id="hospital" value="${esc(s.meta.hospital)}" autocomplete="organization" placeholder="Hospital o centro sanitario" required></div>
+      <div><label for="pharmacist">Farmacéutico/a responsable</label><input id="pharmacist" value="${esc(s.meta.pharmacist)}" autocomplete="name" placeholder="Nombre del profesional" required></div>
+      <div><label for="patient-code">Identificador pseudonimizado <span class="badge">opcional</span></label><input id="patient-code" value="${esc(s.meta.code)}" autocomplete="off" placeholder="Código interno sin datos identificativos"></div>
+    </div>
+    <div id="start-error" class="error" role="alert" aria-live="polite"></div>
+    <h3 class="route-title">¿Cómo desea realizar la estratificación?</h3>
+    <div class="route-grid">
+      <article class="route-card">
+        <span class="route-icon" aria-hidden="true">✍️</span>
+        <h3>Estratificación manual</h3>
+        <p>Complete directamente las variables del modelo CMO a partir de la información clínica comprobada.</p>
+        <button id="manual-route">Estratificar a mano</button>
+      </article>
+      <article class="route-card">
+        <span class="route-icon" aria-hidden="true">✨</span>
+        <h3>Análisis asistido del texto clínico</h3>
+        <p>Pegue un texto pseudonimizado, revise cada dato extraído y complete después la información pendiente.</p>
+        <button id="assisted-route">Usar IA para analizar texto</button>
+      </article>
+    </div>
+    <p class="info-note"><b>Importante:</b> si no se configura un servicio seguro de IA, la versión pública utiliza reglas locales orientativas. Ningún resultado se incorpora al cálculo hasta que el farmacéutico lo valida.</p>
+  </section>`;
+
+  const saveMeta = () => {
+    const hospital = document.querySelector("#hospital").value.trim();
+    const pharmacist = document.querySelector("#pharmacist").value.trim();
+    const code = document.querySelector("#patient-code").value.trim();
+    if (!hospital || !pharmacist) {
+      document.querySelector("#start-error").textContent =
+        "Indique el hospital o centro sanitario y el farmacéutico responsable.";
+      return false;
+    }
+    s.meta.hospital = hospital;
+    s.meta.pharmacist = pharmacist;
+    s.meta.code = code;
+    return true;
+  };
+  document.querySelector("#manual-route").onclick = () => {
+    if (saveMeta()) {
+      update({ clinicalText: "", records: [], result: null, needs: [] });
+      goTo(3);
+    }
+  };
+  document.querySelector("#assisted-route").onclick = () => {
+    if (saveMeta()) goTo(1);
+  };
+}
+function history() {
+  const s = getState();
+  app.innerHTML = `<section class="panel hero"><span class="badge">EXTRACCIÓN LOCAL ORIENTATIVA</span><h2>Extraer información desde la historia clínica</h2><p class="lead">Pegue informe, evolución, antecedentes, analítica, tratamiento o conciliación. Nada se considera cierto hasta que usted lo confirma.</p><label for="clinical">Texto clínico pseudonimizado</label><textarea id="clinical" placeholder="Pegue aquí el texto sin nombre, DNI ni número de historia…">${esc(s.clinicalText)}</textarea><p><small>El texto permanece únicamente en memoria y se elimina al recargar o iniciar una nueva estratificación.</small></p><div class="actions"><button id="analyse">Analizar historia clínica</button></div></section>`;
+  document.querySelector("#analyse").onclick = async (e) => {
+    const text = document.querySelector("#clinical").value.trim();
+    if (!text) return alert("Introduzca texto clínico pseudonimizado.");
+    e.target.disabled = true;
+    e.target.textContent = "Analizando…";
+    try {
+      update({ clinicalText: text, records: await extractClinical(text) });
+      goTo(2);
+    } catch (err) {
+      alert(err.message);
+      e.target.disabled = false;
+    }
+  };
+}
+function review() {
+  const s = getState();
+  app.innerHTML = `<h2>Revisión de la extracción</h2><p class="lead">Confirme, modifique, descarte o deje pendiente cada hallazgo. Solo lo validado puntuará.</p><div class="grid">${s.records
+    .map((r) => {
+      const v = vBy(r.id),
+        op = option(v, r.value);
+      return `<article class="review ${r.validation}" data-id="${r.id}"><div><span class="badge">${esc(r.finding)}</span> · confianza ${esc(r.confidence)}</div><h3>${esc(v.label)}</h3><label>Valor sugerido</label><select>${`<option value="">No consta / pendiente</option>` + v.options.map((o) => `<option value="${o.value}" ${o.value === r.value ? "selected" : ""}>${esc(o.label)} — ${o.score} puntos</option>`).join("")}</select><p><b>Puntuación propuesta:</b> ${op?.score ?? "—"}</p><div class="evidence"><b>Evidencia:</b> ${esc(r.evidence) || "No encontrada"}</div><div class="review-actions"><button data-a="confirm">Confirmar</button><button class="secondary" data-a="modify">Modificar</button><button class="secondary danger" data-a="reject">Descartar</button></div></article>`;
+    })
+    .join(
+      "",
+    )}</div><div class="actions"><button id="continue">Completar información pendiente →</button></div>`;
+  app.querySelectorAll(".review").forEach(
+    (card) =>
+      (card.onclick = (e) => {
+        const a = e.target.dataset.a;
+        if (!a) return;
+        const r = s.records.find((x) => x.id === card.dataset.id),
+          value = card.querySelector("select").value;
+        if (a === "reject") {
+          r.validation = "rejected";
+          r.value = null;
+          r.finding = "descartada";
+        } else if (!value) return alert("Seleccione un valor.");
+        else {
+          r.value = value;
+          r.validation = a === "modify" ? "modified" : "confirmed";
+          r.finding = "validada";
+        }
+        render();
+      }),
+  );
+  document.querySelector("#continue").onclick = () => {
+    goTo(3);
+  };
+}
+function stratification() {
+  const s = getState();
+  app.innerHTML = `<h2>Completar información pendiente y estratificar</h2><p class="lead">Registre manualmente solo los datos comprobados. Puede dejar cualquier variable pendiente.</p><section class="panel"><div class="grid">${VARIABLES.map(
+    (v) => {
+      const r = s.records.find((x) => x.id === v.id),
+        valid = ["confirmed", "modified", "manual"].includes(r?.validation);
+      return `<div><label>${esc(v.label)} ${v.interview ? '<span class="badge">entrevista</span>' : ""}</label><select data-var="${v.id}"><option value="">Pendiente / no consta</option>${v.options.map((o) => `<option value="${o.value}" ${valid && r.value === o.value ? "selected" : ""}>${esc(o.label)} — ${o.score}</option>`).join("")}</select></div>`;
+    },
+  ).join(
+    "",
+  )}</div><hr><label>Elevar prioridad por criterio profesional (opcional)</label><select id="override"><option value="">Sin elevación</option><option value="2">Prioridad 2</option><option value="1">Prioridad 1</option></select><label>Motivo obligatorio si se eleva el nivel</label><input id="reason" placeholder="Criterio clínico y justificación"><div class="actions"><button id="calculate">Calcular con variables validadas</button></div><div id="calculation"></div></section>`;
+  document.querySelector("#calculate").onclick = () => {
+    document.querySelectorAll("[data-var]").forEach((el) => {
+      let r = s.records.find((x) => x.id === el.dataset.var);
+      if (!r) {
+        r = { id: el.dataset.var };
+        s.records.push(r);
+      }
+      if (
+        el.value &&
+        (!["confirmed", "modified"].includes(r.validation) ||
+          r.value !== el.value)
+      ) {
+        r.value = el.value;
+        r.validation = "manual";
+        r.origin = "manual";
+        r.evidence = "Introducción manual por el farmacéutico";
+        r.finding = "validada";
+      } else if (!el.value && r.validation === "manual") {
+        r.value = null;
+        r.validation = "missing";
+      }
+    });
+    try {
+      const result = stratify(s.records, {
+        manualPriority: +document.querySelector("#override").value || null,
+        manualReason: document.querySelector("#reason").value,
+      });
+      update({ result, needs: result.applicable ? mapNeeds(s.records) : [] });
+      if (!result.applicable)
+        document.querySelector("#calculation").innerHTML =
+          `<p class="warning">${result.reason}</p>`;
+      else {
+        document.querySelector("#calculation").innerHTML =
+          `<div class="panel"><div class="score">${result.total}<small>/42</small></div><div class="priority">PRIORIDAD ${result.priority}</div>${result.override ? `<p class="warning">Elevación profesional documentada: ${esc(result.manualReason)}</p>` : ""}<div class="grid">${Object.entries(
+            BLOCKS,
+          )
+            .map(
+              ([k, b]) =>
+                `<div><b>${b.label}: ${result.blocks[k]}/${b.max}</b><div class="bar"><i style="width:${(result.blocks[k] / b.max) * 100}%"></i></div></div>`,
+            )
+            .join(
+              "",
+            )}</div><p>${result.confirmedCount}/20 variables validadas.</p><div class="actions"><button id="next">Ver necesidades →</button></div></div>`;
+        document.querySelector("#next").onclick = () => {
+          goTo(4);
+        };
+      }
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+}
+function needs() {
+  const s = getState();
+  app.innerHTML = `<h2>Necesidades detectadas</h2><p class="lead">Cada propuesta mantiene la trazabilidad con la variable que la origina.</p><section class="panel">${s.needs.map((n) => `<div class="check"><span>✓</span><div><b>${esc(n.label)}</b><br><small>Variable desencadenante: ${esc(vBy(n.trigger)?.label || n.trigger)}</small></div></div>`).join("") || "<p>No se detectaron necesidades automáticas con las variables positivas confirmadas.</p>"}</section><section class="panel"><h3>Objetivos y plan compartido <span class="badge">opcional</span></h3><div class="grid">${[
+    ["pharmacotherapy", "Objetivos farmacoterapéuticos acordados"],
+    ["patient", "Objetivos del paciente"],
+    ["barriers", "Barreras y disposición al cambio"],
+    ["actions", "Acciones acordadas"],
+  ]
+    .map(
+      ([k, l]) =>
+        `<div><label>${l}</label><textarea data-goal="${k}" style="min-height:80px">${esc(s.goals[k])}</textarea></div>`,
+    )
+    .join(
+      "",
+    )}</div></section><div class="actions"><button id="next">Seleccionar intervenciones →</button></div>`;
+  document.querySelector("#next").onclick = () => {
+    document
+      .querySelectorAll("[data-goal]")
+      .forEach((x) => (s.goals[x.dataset.goal] = x.value.trim()));
+    goTo(5);
+  };
+}
+function interventions() {
+  const s = getState();
+  const resources = [
+    ["seguimiento", "Seguimiento farmacoterapéutico"],
+    ["educacion", "Educación sanitaria"],
+    ["adherencia", "Entrevista motivacional / adherencia"],
+    ["telefarmacia", "Telefarmacia"],
+    ["telemonitorizacion", "Telemonitorización"],
+    ["conciliacion", "Conciliación"],
+    ["interacciones", "Revisión de interacciones"],
+    ["cardiologia", "Coordinación asistencial"],
+  ];
+  s.interventions = interventionsFor(s.result.priority, s.resources);
+  app.innerHTML = `<h2>Intervenciones farmacéuticas</h2><section class="panel"><h3>¿Qué intervenciones son factibles en tu entorno?</h3><div class="grid">${resources.map(([k, l]) => `<label class="check"><input type="checkbox" data-resource="${k}" ${s.resources.includes(k) ? "checked" : ""}> ${l}</label>`).join("")}</div></section><section class="panel"><h3>Seleccionar y priorizar</h3>${s.interventions.map((i) => `<label class="check"><input type="checkbox" data-int="${i.id}" ${s.selected.includes(i.id) ? "checked" : ""}><span><b>${esc(i.label)}</b> <span class="badge">P${i.level} · ${esc(i.category)}</span><br><small>${i.available ? "Factible con recursos seleccionados" : "Recomendada, actualmente no disponible"} · responde al nivel y necesidades del paciente</small></span></label>`).join("")}</section><div class="actions"><button id="next">Generar informe →</button></div>`;
+  document.querySelectorAll("[data-resource]").forEach(
+    (x) =>
+      (x.onchange = () => {
+        s.resources = x.checked
+          ? [...new Set([...s.resources, x.dataset.resource])]
+          : s.resources.filter((k) => k !== x.dataset.resource);
+        render();
+      }),
+  );
+  document.querySelector("#next").onclick = () => {
+    s.selected = [...document.querySelectorAll("[data-int]:checked")].map(
+      (x) => x.dataset.int,
+    );
+    s.interventions = interventionsFor(s.result.priority, s.resources);
+    goTo(6);
+  };
+}
+function finalReport() {
+  const s = getState();
+  app.innerHTML = `<h2>Informe CMO cardiovascular</h2><section class="panel no-print"><div class="fields"><div><label>Fecha</label><input data-meta="date" type="date" value="${esc(s.meta.date)}"></div><div><label>Hospital</label><input data-meta="hospital" value="${esc(s.meta.hospital)}"></div><div><label>Farmacéutico/a</label><input data-meta="pharmacist" value="${esc(s.meta.pharmacist)}"></div><div><label>Identificador pseudonimizado</label><input data-meta="code" value="${esc(s.meta.code)}"></div></div></section><pre class="report" id="report">${esc(report(s))}</pre><div class="actions no-print"><button class="secondary" id="copy">Copiar informe</button><button class="secondary" id="download">Descargar Markdown</button><button id="print">Imprimir / PDF</button></div>`;
+  const refresh = () => {
+    document
+      .querySelectorAll("[data-meta]")
+      .forEach((x) => (s.meta[x.dataset.meta] = x.value));
+    document.querySelector("#report").textContent = report(s);
+  };
+  document
+    .querySelectorAll("[data-meta]")
+    .forEach((x) => (x.oninput = refresh));
+  document.querySelector("#copy").onclick = async () => {
+    await navigator.clipboard.writeText(report(s));
+    alert("Informe copiado.");
+  };
+  document.querySelector("#download").onclick = () => download(report(s));
+  document.querySelector("#print").onclick = () => window.print();
+}
+function render() {
+  shell();
+  [start, history, review, stratification, needs, interventions, finalReport][
+    stage
+  ]();
+  scrollTo({ top: 0, behavior: "smooth" });
+}
+document.querySelector("#reset").onclick = () => {
+  if (
+    confirm(
+      "¿Borrar todos los datos de esta estratificación? Esta acción no se puede deshacer.",
+    )
+  ) {
+    reset();
+    stage = 0;
+    unlockedStages.clear();
+    unlockedStages.add(0);
+    render();
+  }
+};
+render();
