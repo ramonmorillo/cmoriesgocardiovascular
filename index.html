@@ -8,9 +8,33 @@
       content="Herramienta CMO cardiovascular de apoyo al farmacéutico hospitalario"
     />
     <title>CMO Cardiovascular</title>
+    <link rel="icon" href="assets/cmo-ds/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#14203a" />
     <link rel="stylesheet" href="assets/styles.css" />
+    <link rel="stylesheet" href="assets/cmo-visual.css" />
+    <script type="application/json" id="cmo-app-meta">
+      {
+        "schema": "cmo-app-meta/1",
+        "id": "cmo-riesgo-cardiovascular",
+        "name": "CMO Cardiovascular",
+        "appVersion": "1.1.0",
+        "algorithm": null,
+        "status": "draft",
+        "releaseDate": null,
+        "clinicalReviewDate": null,
+        "credits": [
+          { "role": "Desarrollo digital", "name": "Dr. Ramón Morillo Verdugo" },
+          { "role": "Modelo clínico", "name": "Documento «Adaptación del Modelo de Atención Farmacéutica CMO en el Paciente con Patologías Cardiovasculares»" }
+        ],
+        "model": "Basado en el modelo CMO: Capacidad, Motivación y Oportunidad.",
+        "website": "https://ramonmorillo.es",
+        "copyright": null,
+        "designSystem": "0.1.0"
+      }
+    </script>
+    <script type="module" src="assets/cmo-ds/cmo-author-signature.js"></script>
   </head>
-  <body>
+  <body class="cmo-scope">
     <header>
       <div>
         <span class="eyebrow">ATENCIÓN FARMACÉUTICA HOSPITALARIA</span>
@@ -29,6 +53,7 @@
       Modelo de Atención Farmacéutica CMO al paciente con patologías
       cardiovasculares. No sustituye el juicio profesional del farmacéutico.
       <span class="credit">Creada por Ramón Morillo · Septiembre de 2026</span>
+      <cmo-author-signature meta="cmo-app-meta"><p>Desarrollo digital: Dr. Ramón Morillo Verdugo · <a href="https://ramonmorillo.es">ramonmorillo.es</a></p></cmo-author-signature>
     </footer>
     <script>
       window.CMO_APP_CONFIG = window.CMO_APP_CONFIG || {

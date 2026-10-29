@@ -1,12 +1,13 @@
-@import url("./cmo-visual.css");
+@import url("./cmo-ds/cmo-tokens.css");
+@import url("./cmo-ds/cmo-components.css");
 
 :root {
-  --ink: #16343b;
-  --muted: #64777a;
-  --brand: #087f73;
-  --brand2: #0e5b63;
-  --soft: #eaf6f3;
-  --line: #d8e3e1;
+  --ink: var(--cmo-ink);
+  --muted: var(--cmo-ink-muted);
+  --brand: var(--cmo-brand-strong);
+  --brand2: var(--cmo-brand-strong);
+  --soft: var(--cmo-brand-soft);
+  --line: var(--cmo-rule);
   --warn: #9a5d00;
   --danger: #a63b42;
   --white: #fff;
@@ -16,7 +17,7 @@
 }
 body {
   margin: 0;
-  background: #f6f8f8;
+  background: var(--cmo-paper);
   color: var(--ink);
   font:
     15px/1.5 system-ui,
@@ -130,7 +131,7 @@ main {
   background: #fbfdfd;
 }
 .route-card:hover {
-  border-color: #8ebdb7;
+  border-color: var(--cmo-control-border);
   box-shadow: 0 8px 24px rgb(14 91 99 / 8%);
 }
 .route-card p {
@@ -185,7 +186,7 @@ input,
 textarea,
 select {
   width: 100%;
-  border: 1px solid #b8c9c7;
+  border: 1px solid var(--cmo-control-border);
   border-radius: 6px;
   padding: 10px;
   font: inherit;
@@ -207,7 +208,7 @@ button {
 button.secondary {
   background: white;
   color: var(--brand2);
-  border: 1px solid #91b5b0;
+  border: 1px solid var(--cmo-control-border);
 }
 button.danger {
   color: var(--danger);
