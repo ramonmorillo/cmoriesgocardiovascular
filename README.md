@@ -38,7 +38,7 @@ El navegador envía `{ clinicalText, variables, instructions }`. Nunca coloque c
 ## Limitaciones
 
 - La heurística local no comprende plenamente negaciones, temporalidad ni contexto.
-- La etiqueta de acceso «Usar IA» no implica que exista IA generativa configurada: sin un endpoint seguro se ejecuta exclusivamente la heurística local.
+- El acceso «Analizar el texto clínico» no implica IA generativa: sin un endpoint seguro configurado se ejecuta exclusivamente la heurística local (aviso visible junto al botón).
 - No existe validación clínica/regulatoria ni integración HCE.
 - Las alertas exhaustivas de anexos quedan pendientes de cotejo con el documento fuente redistribuible.
 - La exactitud de la matriz y actuaciones requiere firma del responsable clínico antes de despliegue asistencial.

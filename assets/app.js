@@ -72,7 +72,7 @@ function start() {
         <span class="route-icon" aria-hidden="true">✨</span>
         <h3>Análisis asistido del texto clínico</h3>
         <p>Pegue un texto pseudonimizado, revise cada dato extraído y complete después la información pendiente.</p>
-        <button id="assisted-route">Usar IA para analizar texto</button>
+        <button id="assisted-route">Analizar el texto clínico</button>
       </article>
     </div>
     <p class="info-note"><b>Importante:</b> si no se configura un servicio seguro de IA, la versión pública utiliza reglas locales orientativas. Ningún resultado se incorpora al cálculo hasta que el farmacéutico lo valida.</p>
