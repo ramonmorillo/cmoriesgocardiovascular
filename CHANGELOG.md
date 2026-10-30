@@ -1,6 +1,10 @@
 # Changelog
 
-## Sin publicar — Identidad CMO Design System 0.1.0 (rama `design/cmo-ds-0.1.0`)
+## 1.2.0 — 2026-10-30 — Identidad CMO Design System
+
+Publicación: 1.1.0 → 1.2.0 (decisión del autor: versión menor por el cambio de interfaz) en `APP_CONFIG.version`, `package.json` y `cmo-app-meta`. CMO Design System actualizado a 0.2.0 (firma multilingüe, compatible). `cmo-app-meta`: `status: "released"`, `releaseDate: "2026-10-30"`. Sin cambios en el motor ni en las variables.
+
+### Cambios incluidos (antes «sin publicar»)
 
 Cambio exclusivamente visual. Sin cambios en `assets/modules/*` ni `assets/app.js`.
 - Copia fijada del CMO Design System 0.1.0 en `assets/cmo-ds/` (manifiesto SHA-256).
