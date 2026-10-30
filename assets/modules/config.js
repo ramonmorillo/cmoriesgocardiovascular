@@ -161,5 +161,5 @@ export const MAX_SCORE = 42;
 export const APP_CONFIG = Object.freeze({
   extractionEndpointUrl:
     globalThis.window?.CMO_APP_CONFIG?.extractionEndpointUrl || "",
-  version: "1.1.0",
+  version: "1.2.0",
 });
