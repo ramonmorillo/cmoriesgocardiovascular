@@ -1,105 +1,46 @@
-/* CMO Suite · capa visual común basada en CMO Migraña */
-:root {
-  --cmo-accent: #35d6b3;
-  --cmo-accent-dark: #087f73;
-  --cmo-accent-soft: #e5faf5;
-  --cmo-bg-a: #084f49;
-  --cmo-bg-b: #244b63;
-  --cmo-focus: #ffbf47;
-  --cmo-panel: #f8fbff;
-  --cmo-line: #d8e2f0;
-  --cmo-ink: #172033;
-  --cmo-muted: #5b6880;
-  --cmo-radius: 28px;
-  --cmo-shadow: 0 24px 70px #02081740;
+/* CMO Design System 0.1.0 · tema «Estratos» de CMO Cardiovascular
+   Se carga después de styles.css. Solo presentación: no altera textos, puntuaciones
+   ni los colores semánticos (--warn, --danger, avisos de privacidad).
+   Tokens: assets/cmo-ds/ (copia fijada, ver CMO-DS-VERSION.json). */
+:root { --cmo-accent: #b3261e; } /* submarca Riesgo Cardiovascular: solo identidad, nunca resultados */
+
+body { background: var(--cmo-paper); color: var(--cmo-ink); font-family: var(--cmo-font-sans); }
+
+body > header { background: var(--cmo-paper); padding-top: clamp(24px, 4vw, 40px); padding-bottom: clamp(18px, 3vw, 26px); border-bottom-color: var(--cmo-rule); }
+body > header > div:first-child::before { /* franja de estratos C·M·O (decorativa) */
+  content: ""; display: block; width: 160px; height: 4px; margin-bottom: var(--cmo-space-4);
+  background: linear-gradient(90deg, var(--cmo-c) 0 50%, transparent 50% 52%, var(--cmo-m) 52% 80%, transparent 80% 82%, var(--cmo-o) 82%);
 }
-html {
-  scroll-behavior: smooth;
-}
-body {
-  min-height: 100vh;
-  background: radial-gradient(
-    circle at 15% 8%,
-    var(--cmo-bg-a) 0,
-    #101b33 36%,
-    var(--cmo-bg-b) 100%
-  ) !important;
-  color: var(--cmo-ink);
-}
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(#ffffff08 1px, transparent 1px),
-    linear-gradient(90deg, #ffffff08 1px, transparent 1px);
-  background-size: 44px 44px;
-  pointer-events: none;
-}
-body > header,
-main,
-footer,
-.privacy,
-nav {
-  position: relative;
-}
-body > header {
-  width: min(1180px, calc(100% - 32px));
-  margin: 24px auto 0;
-  padding: 28px !important;
-  border: 1px solid #ffffff2b !important;
-  border-radius: var(--cmo-radius) var(--cmo-radius) 0 0 !important;
-  background: linear-gradient(135deg, #07544b, #087f73 55%, #26536a) !important;
-  color: #fff;
-  box-shadow: var(--cmo-shadow) !important;
-}
-body > header h1 {
-  font-size: clamp(2.4rem, 5vw, 4.4rem) !important;
-  line-height: 0.95;
-  letter-spacing: -0.05em;
-  color: #fff;
-}
-body > header h1 strong,
-.eyebrow {
-  color: #d8fff5 !important;
-}
-.privacy {
-  width: min(1180px, calc(100% - 32px));
-  margin: auto;
-}
-.panel {
-  border-radius: 22px !important;
-  box-shadow: 0 16px 42px #0208171c !important;
-}
-.start-panel {
-  border-left: 0 !important;
-}
-button {
-  border-radius: 999px !important;
-}
-input,
-select,
-textarea {
-  border-radius: 13px !important;
-}
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 4px solid var(--cmo-focus) !important;
-  outline-offset: 2px;
-}
-footer {
-  width: min(1180px, calc(100% - 32px));
-  margin: 18px auto !important;
-  border-radius: 22px !important;
-  background: #f8fbfff0 !important;
-  color: var(--cmo-ink) !important;
-  box-shadow: 0 16px 42px #0208171c !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  * {
-    scroll-behavior: auto !important;
-    transition: none !important;
-  }
-}
+h1 { font: 600 clamp(1.9rem, 4.5vw, 2.8rem)/1.08 var(--cmo-font-serif); letter-spacing: -.015em; color: var(--cmo-ink); }
+h1 strong { color: var(--cmo-accent); font-weight: 600; }
+.eyebrow { color: var(--cmo-accent); }
+h2 { font-family: var(--cmo-font-serif); font-weight: 600; }
+
+nav { background: var(--cmo-surface); }
+.step { min-height: 44px; }
+/* Corrige un defecto previo: con justify-content:center y desbordamiento, los primeros pasos quedaban cortados e inalcanzables en móvil */
+@media (max-width: 900px) { nav { justify-content: flex-start; } }
+@media (max-width: 480px) { body > header { flex-wrap: wrap; gap: var(--cmo-space-3); padding-inline: 16px; } }
+.step.active { color: var(--cmo-ink); border-color: var(--cmo-accent); }
+.step:hover:not(:disabled) { color: var(--cmo-ink); }
+
+.panel, .route-card, .review { border-radius: var(--cmo-radius-md); }
+.panel { box-shadow: var(--cmo-shadow-1); }
+.route-card { background: var(--cmo-surface); }
+.route-card h3 { font-family: var(--cmo-font-serif); font-weight: 600; }
+.route-card:hover { box-shadow: var(--cmo-shadow-2); }
+.score { font-variant-numeric: tabular-nums; }
+
+button { min-height: 44px; border-radius: var(--cmo-radius-sm); font-weight: 600; }
+button:not(.secondary):not(.step):hover { background: var(--cmo-ink); }
+button.secondary:hover { background: var(--cmo-brand-soft); }
+input, textarea, select { border-radius: var(--cmo-radius-sm); color: var(--cmo-ink); }
+:is(button, input, select, textarea, a, summary):focus-visible { outline: 3px solid var(--cmo-focus); outline-offset: 2px; }
+
+footer { max-width: 1180px; margin: var(--cmo-space-6) auto 0; padding: var(--cmo-space-5) 20px var(--cmo-space-6); border-top-color: var(--cmo-rule);
+  text-align: left; font-size: var(--cmo-text-sm); color: var(--cmo-ink-muted); }
+.credit { color: var(--cmo-ink-muted); font-weight: 400; }
+footer cmo-author-signature { margin-top: var(--cmo-space-4); }
+footer a { color: var(--cmo-brand-strong); }
+
+@media print { body > header > div:first-child::before { display: none; } .panel { box-shadow: none; } }
