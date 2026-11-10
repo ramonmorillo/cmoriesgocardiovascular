@@ -1,5 +1,35 @@
 # Changelog
 
+## Sin publicar (rama `claude/zen-pasteur-u8tn7z`)
+
+Adopción del núcleo común del ecosistema CMO (informe único, PDF, exportación) y corrección de defectos funcionales. **Sin cambios en la matriz clínica ni en el motor**: `config.js`, `cmo-engine.js`, `needs-mapper.js`, `interventions-catalog.js`, `heuristic-extraction.js` y `clinical-extraction-service.js` son idénticos byte a byte (huellas en `tests/fixtures/clinical.sha256.json`). Por eso `APP_CONFIG.version` sigue en 1.2.0: la versión se fija en el commit de publicación.
+
+### Estado provisional
+- Con variables pendientes el resultado se rotula **PROVISIONAL** y se informa de cuántas faltan y de la puntuación y prioridad máximas alcanzables (calculadas con el motor original). Antes, con 0/20 variables se mostraba «PRIORIDAD 3» sin matiz.
+- Necesidades: confirmadas (igual que antes) y **potenciales** (las que `needs-mapper` asociaría a variables aún pendientes).
+
+### Defectos corregidos
+- Una variable validada en la revisión que luego se dejaba pendiente en el paso 4 seguía puntuando.
+- Marcar un recurso borraba las intervenciones seleccionadas.
+- Volver a Inicio y pulsar «Estratificar a mano» dejaba los pasos 5–7 desbloqueados sin resultado (`TypeError`).
+- La elevación profesional se perdía al volver al paso 4; una elevación sin motivo o que no elevaba se ignoraba sin explicarlo.
+- El informe afirmaba «Sin alertas adicionales detectadas» aunque la herramienta no evalúa alertas: se elimina esa sección.
+
+### Flujo e informe
+- Revisión: aviso de posible negación junto a la evidencia (no cambia la propuesta del extractor) y opción «Dejar pendiente».
+- Intervenciones: estado por intervención (realizada, planificada, no procede) en lugar de casilla.
+- Informe único `cmo-report/1`: copiar para historia clínica (con confirmación visible), **PDF real**, imprimir solo el informe y descarga `.txt` (sustituye a la descarga Markdown).
+- Exportación JSON (`cmo-export/1` + `cmo-rcv-case/1`) y CSV protegido frente a fórmulas; **importación validada** que recalcula siempre el resultado con el motor.
+- Confirmación accesible antes de borrar o sustituir; aviso al salir con datos sin exportar; avisos no bloqueantes en lugar de `alert()`.
+- Accesibilidad: `aria-current` en el paso activo, etiquetas asociadas en los pasos 3, 4, 5 y 7 (antes 42 campos sin nombre accesible), 0 infracciones axe WCAG A/AA en las 7 etapas.
+
+### Pruebas
+- `npm test`: 22 (7 del motor originales, 11 del adaptador, 4 de firma). `npm run test:e2e`: 4 recorridos en Chromium.
+
+### Pendiente de decisión del autor
+- El extractor sigue sin tratar la negación ni el género («Niega HTA» se propone como riesgo; «fumadora» no se detecta): ahora se avisa, pero las reglas no se han tocado.
+- Pie «Septiembre de 2026» y `releaseDate` 2026-10-30 no se han tocado.
+
 ## 1.2.0 — 2026-10-30 — Identidad CMO Design System
 
 Publicación: 1.1.0 → 1.2.0 (decisión del autor: versión menor por el cambio de interfaz) en `APP_CONFIG.version`, `package.json` y `cmo-app-meta`. CMO Design System actualizado a 0.2.0 (firma multilingüe, compatible). `cmo-app-meta`: `status: "released"`, `releaseDate: "2026-10-30"`. Sin cambios en el motor ni en las variables.
