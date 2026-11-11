@@ -44,3 +44,16 @@ footer cmo-author-signature { margin-top: var(--cmo-space-4); }
 footer a { color: var(--cmo-brand-strong); }
 
 @media print { body > header > div:first-child::before { display: none; } .panel { box-shadow: none; } }
+
+/* Flujo común (núcleo 0.3.0): lista de pasos, estado de intervenciones, vista previa del informe y diálogos. */
+#steps ol { display: contents; list-style: none; margin: 0; padding: 0; }
+#steps li { display: contents; }
+.step > span { font-variant-numeric: tabular-nums; }
+.intervention { display: grid; grid-template-columns: 1fr minmax(12rem, 18rem); gap: var(--cmo-space-3); align-items: center; }
+#report-preview { margin: var(--cmo-space-4) 0; }
+textarea.report { width: 100%; white-space: pre-wrap; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+.cmo-modal button.cmo-btn--secondary { background: var(--cmo-surface); color: var(--cmo-brand-strong); border: 1px solid var(--cmo-brand-strong); }
+.cmo-modal button.cmo-btn--danger { background: var(--cmo-error); color: #fff; }
+.priority .cmo-level { font-size: 1rem; }
+@media (max-width: 760px) { .intervention { grid-template-columns: 1fr; } }
