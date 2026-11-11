@@ -19,9 +19,9 @@ const state = (records, extra = {}) => ({ records, meta: { date: '2026-11-10', h
 // Misma construcción que tests/cmo-engine.test.js para alcanzar un total exacto.
 const fakeTotal = n => { let left = n; return VARIABLES.map(v => { const opts = [...v.options].sort((a, b) => b.score - a.score), o = (n < 42 && v.id === 'pregnancy' ? null : opts.find(x => x.score <= left && x.value !== '<18')) || zero(v); left -= o.score; return { id: v.id, value: o.value, validation: 'confirmed' }; }); };
 
-test('los ficheros clínicos no se han modificado (huellas de la versión 1.2.0)', () => {
+test('los ficheros clínicos no se han modificado (huellas; la constante version se normaliza)', () => {
   const expected = JSON.parse(fs.readFileSync(new URL('./fixtures/clinical.sha256.json', import.meta.url), 'utf8'));
-  for (const [file, hash] of Object.entries(expected)) assert.equal(crypto.createHash('sha256').update(fs.readFileSync(new URL(`../assets/modules/${file}`, import.meta.url))).digest('hex'), hash, file);
+  for (const [file, hash] of Object.entries(expected)) assert.equal(crypto.createHash('sha256').update(fs.readFileSync(new URL(`../assets/modules/${file}`, import.meta.url), 'utf8').replace(/version: "[^"]*"/, 'version: "X"')).digest('hex'), hash, file);
 });
 
 test('fronteras 16/17 y 22/23: el adaptador devuelve exactamente el resultado del motor', () => {

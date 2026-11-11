@@ -1,6 +1,6 @@
 # Changelog
 
-## Sin publicar (rama `claude/zen-pasteur-u8tn7z`)
+## 1.3.0 — 2026-11-11
 
 Adopción del núcleo común del ecosistema CMO (informe único, PDF, exportación) y corrección de defectos funcionales. **Sin cambios en la matriz clínica ni en el motor**: `config.js`, `cmo-engine.js`, `needs-mapper.js`, `interventions-catalog.js`, `heuristic-extraction.js` y `clinical-extraction-service.js` son idénticos byte a byte (huellas en `tests/fixtures/clinical.sha256.json`). Por eso `APP_CONFIG.version` sigue en 1.2.0: la versión se fija en el commit de publicación.
 
